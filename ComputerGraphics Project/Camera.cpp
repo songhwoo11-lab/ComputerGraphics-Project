@@ -35,3 +35,10 @@ void Camera::zoom(float delta) {
 	if ((delta < 0 and glm::radians(30.f) <= result) or (delta > 0 and result <= glm::radians(150.f)))
 		fovy = result;
 }
+
+glm::vec3 Camera::getFront() const {
+	glm::mat4 mat = glm::mat4(1.0f);
+	mat = glm::rotate(mat, yaw, glm::vec3(0.0, 1.0, 0.0));
+	mat = glm::rotate(mat, pitch, glm::vec3(1.0, 0.0, 0.0));
+	return mat * glm::vec4(front, 0.0f);
+}

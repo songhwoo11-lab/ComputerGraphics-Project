@@ -30,12 +30,18 @@ public:
 	}
 
 	void move(glm::vec3 delta) { center += delta; }
-	void SetPos(glm::vec3 pos) { center = pos; }
 	glm::vec3 getPos() const { return center; }
+	void SetPos(glm::vec3 pos) { center = pos; }
+
 	glm::vec3 getsize() const { return size; }
+
 	void rotatePitch(GLfloat delta) { pitch += delta; }
+	GLfloat getPitch() const { return pitch; }
+	void SetPitch(GLfloat newPth) { pitch = newPth; }
+
 	void rotateYaw(GLfloat delta) { yaw += delta; }
 	GLfloat getYaw() const { return yaw; }
+	void SetYaw(GLfloat newYaw) { yaw = newYaw; }
 		 
 private:
  	glm::mat4 getWorldMat() const {
@@ -44,6 +50,7 @@ private:
 
 		worldMat = glm::translate(worldMat, center);
 		worldMat = glm::rotate(worldMat, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+		worldMat = glm::rotate(worldMat, pitch, glm::vec3(1.0f, 0.0f, 0.0f));
 		worldMat = glm::scale(worldMat, size);
 
 		return worldMat;
@@ -66,10 +73,38 @@ namespace {
 
 	glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	std::vector<Model> meshs;
+	Model ak47;
+	glm::vec3 pos = glm::vec3(-0.466667, -0.4, 0.8);
 
 	bool MouseEntered = false;
 	double lastX, lastY;
+
+	bool move = false;
+	float frontState, leftState;
+	constexpr float meterpersec = 1.94f;
+}
+
+namespace {
+	void drawFloor(const Shader& shader) {
+		static glm::vec3 color = glm::vec3(0.0f, 1.0f, 0.0f);
+		GLfloat vertices[] = {
+			50.0f, 0.0f, 50.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+			50.0f, 0.0f, -50.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+			-50.0f, 0.0f, -50.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+			-50.0f, 0.0f, 50.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+		};
+		GLuint indices[] = {
+			0,1,2,
+			0,2,3,
+		};
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+		glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "outColor"), 1, glm::value_ptr(color));
+		glUniformMatrix4fv(glGetUniformLocation(shader.GetShaderID(), "world"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+
+		glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
+	}
 }
 
 void OpenGL::SetBuffer()
@@ -98,14 +133,10 @@ void OpenGL::startPractice()
 	shader = Shader("vertex.glsl", "fragment.glsl");
 	EnableState(GL_DEPTH_TEST);
 	EnableState(GL_CULL_FACE);
-	pCamera = std::make_unique<Camera>(Camera(glm::vec3(0.9, 1.3, -3.1)));
-	// 0.9, 1.3, -3.1
-	// pitch: -0.17yaw : 0.314533
-	lightPos = glm::vec3(5.0f, 0.0f, 0.0f);
-	meshs.push_back(Model("Object\\ak47.obj", glm::vec3(), glm::vec3(2.f)));
-	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "viewPos"), 1, glm::value_ptr(pCamera->eye));
-	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightColor"), 1, glm::value_ptr(glm::vec3(1.0f)));
-	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightPos"), 1, glm::value_ptr(lightPos));
+	pCamera = std::make_unique<Camera>(Camera(glm::vec3(0.0, 2.0, 0.0)));
+
+	lightPos = glm::vec3(0.0f, 5.0f, 0.0f);
+	ak47 = Model("Object\\ak47.obj", pCamera->eye + pos, glm::vec3(0.5f));
 }
 
 void OpenGL::mainloop() {
@@ -120,18 +151,27 @@ void OpenGL::mainloop() {
 
 // 렌더링 함수
 void OpenGL::rendering() {
-	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+	glClearColor(0.5f, 0.5f, 0.9f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	shader.UseProgram();
 
+	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "viewPos"), 1, glm::value_ptr(pCamera->eye));
+	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightColor"), 1, glm::value_ptr(glm::vec3(1.0f)));
+	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightPos"), 1, glm::value_ptr(lightPos));
+
 	glUniformMatrix4fv(glGetUniformLocation(shader.GetShaderID(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 	glUniformMatrix4fv(glGetUniformLocation(shader.GetShaderID(), "view"), 1, GL_FALSE, glm::value_ptr(pCamera->getViewMatrix()));
 	
+	// ak47를 화면에 고정시키기
+	glm::mat4 mat = glm::mat4(1.0f);
+	mat = glm::rotate(mat, ak47.getYaw(), glm::vec3(0.0f, 1.0f, 0.0f));
+	mat = glm::rotate(mat, ak47.getPitch(), glm::vec3(1.0f, 0.0f, 0.0f));
+	ak47.SetPos(pCamera->eye + glm::vec3(mat * glm::vec4(pos, 1.0f)));
+
 	// 그리기
-	for (int i = 0; i < meshs.size(); ++i){
-		meshs[i].draw(shader);
-	}
+	drawFloor(shader);
+	ak47.draw(shader);
 
 
 	glfwSwapBuffers(window);
@@ -144,8 +184,11 @@ void OpenGL::Timer(double time)
 	sec = glfwGetTime();
 	if (sec - fir >= time) {
 		fir = sec;
-		// 작업 처리
-
+		// 작업 처리	
+		auto front = pCamera->getFront();
+		pCamera->eye += frontState * glm::vec3(front.x, 0, front.z);
+		front = glm::rotate(glm::mat4(1.0f), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(front, 1.0f);
+		pCamera->eye += leftState * glm::vec3(front.x, 0, front.z);
 	}
 }
 
@@ -157,9 +200,9 @@ void OpenGL::UpdateProjection()
 // 콜백 함수
 void OpenGL::keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (action == GLFW_RELEASE) return;
 	switch (key) {
 	case GLFW_KEY_ESCAPE:
+		if (action == GLFW_RELEASE) return;
 		if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			MouseEntered = false;
@@ -168,6 +211,31 @@ void OpenGL::keyboardCallback(GLFWwindow* window, int key, int scancode, int act
 			glfwSetWindowShouldClose(window, true);
 			std::cout << pCamera->eye.x << ", " << pCamera->eye.y << ", " << pCamera->eye.z << '\n';
 		}
+		break;
+	case GLFW_KEY_W:
+		if (action == GLFW_PRESS)
+			frontState += 1.0f;
+		if (action == GLFW_RELEASE)
+			frontState -= 1.0f;
+			
+		break;
+	case GLFW_KEY_A:
+		if (action == GLFW_PRESS)
+			leftState += meterpersec;
+		if (action == GLFW_RELEASE)
+			leftState -= meterpersec;
+		break;
+	case GLFW_KEY_S:
+		if (action == GLFW_PRESS)
+			frontState -= meterpersec;
+		if (action == GLFW_RELEASE)
+			frontState += meterpersec;
+		break;
+	case GLFW_KEY_D:
+		if (action == GLFW_PRESS)
+			leftState -= meterpersec;
+		if (action == GLFW_RELEASE)
+			leftState += meterpersec;
 		break;
 	case GLFW_KEY_F1:
 		pCamera->move(glm::vec3(0.1f, 0.0f, 0.0f));
@@ -211,13 +279,15 @@ void OpenGL::CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 		auto dirY = ypos - lastY;
 
 
-		float sensitivity = 0.01f;
+		float sensitivity = 0.003f;
 		pCamera->yaw += sensitivity  * -dirX;
 		pCamera->pitch += sensitivity * dirY;
-		
+
 		if (pCamera->pitch > glm::radians(89.0f)) pCamera->pitch = glm::radians(89.0f);
 		if (pCamera->pitch < glm::radians(-89.0f)) pCamera->pitch = glm::radians(-89.0f);
-		std::cout << "pitch: " << pCamera->pitch << "yaw: " << pCamera->yaw << '\n';
+
+		ak47.SetPitch(pCamera->pitch);
+		ak47.SetYaw(pCamera->yaw);
 		lastX = xpos, lastY = ypos;
 	}
 }
@@ -238,6 +308,8 @@ void OpenGL::CharCallback(GLFWwindow* window, unsigned int codepoint)
 	case 'p':
 		isPerspective ^= 1;
 		UpdateProjection();
+		break;
+
 	}
 }
 void OpenGL::FramebufferSizeCallback(GLFWwindow* window, int width, int height) {}

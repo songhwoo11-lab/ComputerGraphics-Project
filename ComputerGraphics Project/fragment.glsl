@@ -16,10 +16,12 @@ void main()
 	vec3 lightDir = normalize(lightPos - FragPos);
 	vec3 ViewDir = normalize(ViewPos - FragPos);
 
+	float dis = 10.0 / distance(lightPos, FragPos);
+
 	float diffuseLight = max(dot(lightDir, Normal), 0);
 	vec3 diffuse = diffuseLight * lightColor;
 	
-	float shininess = 16.0;
+	float shininess = 128.0;
 	vec3 reflectDir = normalize(reflect(-lightDir, Normal));
 	float specularLight = diffuseLight > 0.0 ? max(dot(reflectDir, ViewDir), 0.0) : 0.0;
 	specularLight = pow(specularLight, shininess);
@@ -28,7 +30,7 @@ void main()
 	float ambientStrength = 0.3;
 	vec3 ambient = ambientStrength * lightColor;
 	
-	vec3 result = ((diffuse + ambient) * outColor + specular);
+	vec3 result = ((diffuse + ambient) * outColor + specular) * dis;
 
 	FragColor = vec4(result, 1.0);
 }
