@@ -8,7 +8,7 @@
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glew32.lib")
 #pragma comment(lib, "glfw3.lib")
-#pragma comment(lib, "assimp-vc145-mt.lib")
+#pragma comment(lib, "assimp-vc145-mtd.lib")
 #pragma comment(lib, "freetype.lib")
 
 
