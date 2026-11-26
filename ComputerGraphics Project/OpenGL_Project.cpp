@@ -81,6 +81,7 @@ private:
 namespace {
 	Shader shader;
 	Texture ak47Text, floorText, bulletText;
+	Texture buildingText, campText;
 	Font font;
 
 	bool timer = true;
@@ -116,6 +117,8 @@ namespace {
 	float reloadFirstTime = 0.0f;
 
 	std::vector<Bullet> bullets;
+	std::vector<Model> buildings;
+	std::vector<Model> camps;
 }
 
 namespace {
@@ -180,6 +183,8 @@ void OpenGL::startPractice()
 	ak47Text = Texture("image\\ak47.png");
 	floorText = Texture("image\\stonefloor.png");
 	bulletText = Texture("image\\bullet.png");
+	buildingText = Texture("image\\building.png");
+	campText = Texture("image\\camp.png");
 	font = Font("C:\\Windows\\Fonts\\HMKMRHD.TTF"); 
 
 	EnableState(GL_DEPTH_TEST);
@@ -187,6 +192,15 @@ void OpenGL::startPractice()
 	pCamera = std::make_unique<Camera>(Camera(glm::vec3(0.0, 4.0, 0.0)));
 
 	ak47 = Model("Object\\ak47.obj", pCamera->eye + pos, glm::vec3(1.0f));
+
+	// 폐건물
+	buildings.emplace_back("Object\\cube.obj", glm::vec3(-45.0f, 15.0f, 60.0f), glm::vec3(16.0f, 30.0f, 16.0f));
+	buildings.emplace_back("Object\\cube.obj", glm::vec3(45.0f, 20.0f, 75.0f), glm::vec3(20.0f, 40.0f, 18.0f));
+	buildings.emplace_back("Object\\cube.obj", glm::vec3(-60.0f, 12.5f, -35.0f), glm::vec3(18.0f, 25.0f, 14.0f));
+	buildings.emplace_back("Object\\cube.obj", glm::vec3(55.0f, 17.5f, -50.0f), glm::vec3(16.0f, 35.0f, 16.0f));
+	
+	// 캠프
+	camps.emplace_back("Object\\cube.obj", glm::vec3(-18.0f, 2.5f, 25.0f), glm::vec3(10.0f, 5.0f, 8.0f));
 }
 
 void OpenGL::mainloop() {
@@ -220,6 +234,12 @@ void OpenGL::rendering() {
 	floorText.BindTexture();
 	drawFloor(shader, 1024);
 
+	buildingText.BindTexture();
+	for (const auto& building : buildings) building.draw(shader);
+	
+
+	campText.BindTexture();
+	for (const auto& camp : camps) camp.draw(shader);
 
 	ak47Text.BindTexture();
 	ak47.draw(shader);
